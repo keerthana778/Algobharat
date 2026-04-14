@@ -1,154 +1,112 @@
-import { useState } from "react";
-import { verifyData } from "./api";
+import React, { useState } from "react";
+import "./App.css";
 import { connectWallet, sendTransaction } from "./wallet";
 
 function App() {
-  const [partyA, setPartyA] = useState({ name: "", pan: "", amount: "" });
-  const [partyB, setPartyB] = useState({ name: "", pan: "", amount: "" });
+  const [account, setAccount] = useState(null);
+  const [fileA, setFileA] = useState(null);
+  const [fileB, setFileB] = useState(null);
   const [result, setResult] = useState(null);
-  const [txId, setTxId] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  // AI Verification
-  const handleVerify = async () => {
-    setLoading(true);
+  // CONNECT WALLET
+  async function handleConnect() {
     try {
-      const res = await verifyData({
-        partyA,
-        partyB
-      });
-      setResult(res);
-      setTxId(null); // reset blockchain state on new verify
+      const acc = await connectWallet();
+      setAccount(acc);
     } catch (err) {
       console.error(err);
-      alert("Error verifying data");
     }
-    setLoading(false);
-  };
+  }
 
-  // Blockchain Transaction
-  const handleBlockchain = async () => {
+  // FILE → HASH
+  async function fileToHash(file) {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // GET TRANSACTION DATA (SAFE VERSION)
+  async function getTransaction(txId) {
+    const res = await fetch(
+      `https://testnet-api.algonode.cloud/v2/transactions/${txId}`
+    );
+
+    const data = await res.json();
+
+    // 🔥 handle delay in blockchain confirmation
+    if (!data.transaction || !data.transaction.note) {
+      throw new Error("Transaction not confirmed yet, try again");
+    }
+
+    const note = atob(data.transaction.note);
+
+    return JSON.parse(note);
+  }
+
+  // MAIN FUNCTION
+  async function handleSubmit() {
     try {
-      setLoading(true);
+      if (!fileA || !fileB) {
+        alert("Upload both documents");
+        return;
+      }
 
-      await connectWallet();
+      // create hashes
+      const hashA = await fileToHash(fileA);
+      const hashB = await fileToHash(fileB);
 
-      const tx = await sendTransaction({
-        status: "verified",
-        score: result.score,
-        timestamp: new Date().toISOString()
+      // send transaction
+      const txId = await sendTransaction({
+        hashA,
+        hashB,
+        timestamp: Date.now(),
       });
 
-      setTxId(tx);
+      if (!txId) {
+        alert("Transaction sent but TX ID missing");
+        return;
+      }
+
+      // ⏳ WAIT for blockchain confirmation
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      // fetch stored data
+      const savedData = await getTransaction(txId);
+
+      setResult(savedData);
+
     } catch (err) {
       console.error(err);
-      alert("Transaction failed");
+      alert("Error: " + err.message);
     }
-
-    setLoading(false);
-  };
+  }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>AI Agreement Verification</h2>
+    <div className="App">
+      <h1>📄 AI Agreement Verifier</h1>
 
-      {/* Party A */}
-      <h3>Party A</h3>
-      <input
-        placeholder="Name"
-        value={partyA.name}
-        onChange={(e) =>
-          setPartyA({ ...partyA, name: e.target.value })
-        }
-      />
-      <br />
-      <input
-        placeholder="PAN (ABCDE1234F)"
-        value={partyA.pan}
-        onChange={(e) =>
-          setPartyA({ ...partyA, pan: e.target.value })
-        }
-      />
-      <br />
-      <input
-        placeholder="Amount"
-        type="number"
-        value={partyA.amount}
-        onChange={(e) =>
-          setPartyA({ ...partyA, amount: Number(e.target.value) })
-        }
-      />
-
-      {/* Party B */}
-      <h3>Party B</h3>
-      <input
-        placeholder="Name"
-        value={partyB.name}
-        onChange={(e) =>
-          setPartyB({ ...partyB, name: e.target.value })
-        }
-      />
-      <br />
-      <input
-        placeholder="PAN (ABCDE1234F)"
-        value={partyB.pan}
-        onChange={(e) =>
-          setPartyB({ ...partyB, pan: e.target.value })
-        }
-      />
-      <br />
-      <input
-        placeholder="Amount"
-        type="number"
-        value={partyB.amount}
-        onChange={(e) =>
-          setPartyB({ ...partyB, amount: Number(e.target.value) })
-        }
-      />
-
-      <br /><br />
-
-      {/* Verify Button */}
-      <button onClick={handleVerify} disabled={loading}>
-        {loading ? "Verifying..." : "Verify"}
+      <button onClick={handleConnect}>
+        {account ? "Connected ✅" : "Connect Wallet (QR)"}
       </button>
 
-      {/* Result */}
+      <div className="card">
+        <h3>Upload Agreement Documents</h3>
+
+        <input type="file" onChange={(e) => setFileA(e.target.files[0])} />
+        <input type="file" onChange={(e) => setFileB(e.target.files[0])} />
+
+        <button onClick={handleSubmit}>
+          Verify & Record on Blockchain
+        </button>
+      </div>
+
       {result && (
-        <div style={{ marginTop: 20 }}>
-          <h3>Result</h3>
-          <p><b>Score:</b> {result.score}</p>
-          <p><b>Risk:</b> {result.risk}</p>
-
-          {result.issues.length > 0 && (
-            <div>
-              <b>Issues:</b>
-              {result.issues.map((i, idx) => (
-                <p key={idx}>⚠ {i}</p>
-              ))}
-            </div>
-          )}
-
-          {/* Blockchain Button (SAFE) */}
-          <button
-            onClick={handleBlockchain}
-            disabled={loading || txId}
-          >
-            {txId
-              ? "Already Recorded on Blockchain ✅"
-              : loading
-              ? "Processing..."
-              : "Confirm & Record on Blockchain"}
-          </button>
-        </div>
-      )}
-
-      {/* Transaction Result */}
-      {txId && (
-        <div style={{ marginTop: 20 }}>
-          <h3>✅ Stored on Algorand</h3>
-          <p>Transaction ID:</p>
-          <code>{txId}</code>
+        <div className="result">
+          <h3>📊 Stored Data</h3>
+          <p><b>Hash A:</b> {result.hashA}</p>
+          <p><b>Hash B:</b> {result.hashB}</p>
+          <p><b>Time:</b> {new Date(result.timestamp).toLocaleString()}</p>
         </div>
       )}
     </div>
