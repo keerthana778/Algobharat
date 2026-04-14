@@ -1,11 +1,25 @@
-export async function verifyData(data) {
-  const res = await fetch("http://127.0.0.1:8000/verify", {
+const BASE_URL = "http://127.0.0.1:8000";
+
+export async function suggestDocs(purpose) {
+  const formData = new FormData();
+  formData.append("purpose", purpose);
+
+  const res = await fetch(`${BASE_URL}/ai/suggest`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
+    body: formData
   });
 
-  return await res.json();
+  return res.json();
+}
+
+export async function analyzeFile(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${BASE_URL}/analyze`, {
+    method: "POST",
+    body: formData
+  });
+
+  return res.json();
 }

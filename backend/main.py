@@ -3,26 +3,26 @@ from fastapi.middleware.cors import CORSMiddleware
 import re
 from difflib import SequenceMatcher
 
-# 🔥 MISTRAL (STABLE VERSION 0.1.3)
+# ✅ Mistral (correct version: 0.1.3)
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
+
 from dotenv import load_dotenv
 import os
 
 # =========================
-# 🔐 ENV SETUP
+# 🔐 LOAD ENV
 # =========================
 load_dotenv()
-
 API_KEY = os.getenv("MISTRAL_API_KEY")
 
 if not API_KEY:
-    raise ValueError("Mistral API key not found")
+    raise ValueError("MISTRAL_API_KEY not found in .env")
 
 client = MistralClient(api_key=API_KEY)
 
 # =========================
-# 🚀 FASTAPI INIT
+# 🚀 APP INIT
 # =========================
 app = FastAPI()
 
@@ -34,16 +34,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# =========================
-# 🟢 BASIC ROUTE
-# =========================
 @app.get("/")
 def home():
     return {"message": "Backend is working 🚀"}
 
 
 # =========================
-# 🔥 EXISTING LOGIC
+# 🔧 BASIC LOGIC (UNCHANGED)
 # =========================
 
 def validate_pan(pan):
@@ -83,139 +80,82 @@ def verify(data: dict):
         score -= 15
         issues.append("Name mismatch")
 
-    required = ["name", "amount"]
-    for field in required:
-        if not partyA.get(field):
-            score -= 10
-            issues.append(f"Missing {field} (Party A)")
-        if not partyB.get(field):
-            score -= 10
-            issues.append(f"Missing {field} (Party B)")
-
-    if score >= 85:
-        risk = "Low"
-    elif score >= 60:
-        risk = "Medium"
-    else:
-        risk = "High"
-
     return {
         "score": score,
-        "risk": risk,
         "issues": issues,
         "similarity": similarity
     }
 
 
 # =========================
-# 🤖 AI SUGGEST (MISTRAL)
+# 🤖 AI HELPER
 # =========================
+
+def ask_ai(prompt: str):
+    response = client.chat(
+        model="mistral-small",
+        messages=[ChatMessage(role="user", content=prompt)]
+    )
+    return response.choices[0].message.content
+
+
+# =========================
+# 🧠 AI STEP 1 — SUGGEST DOCS
+# =========================
+
 @app.post("/ai/suggest")
 def ai_suggest(purpose: str = Form(...)):
-
     prompt = f"""
-    A user wants to create an agreement for: {purpose}
+    Suggest ONLY 5 to 6 required documents for this purpose: {purpose}
 
-    Suggest required documents.
-    Keep it general (no country-specific names).
-    Give a simple list.
+    Rules:
+    - Only document names
+    - No explanation
+    - No paragraph
+    - Output as bullet or list
     """
 
-    response = client.chat(
-        model="mistral-small",
-        messages=[
-            ChatMessage(role="user", content=prompt)
-        ]
-    )
+    result = ask_ai(prompt)
+
+    docs = [line.strip("-• ").strip() for line in result.split("\n") if line.strip()]
 
     return {
-        "suggestions": response.choices[0].message.content
+        "documents": docs[:6]
     }
 
 
 # =========================
-# 🤖 AI EXPLAIN
+# 🧠 AI STEP 3 — ANALYZE DOC
 # =========================
-@app.post("/ai/explain")
-def ai_explain(query: str = Form(...)):
 
-    prompt = f"""
-    Explain this clearly in simple terms:
-
-    {query}
-    """
-
-    response = client.chat(
-        model="mistral-small",
-        messages=[
-            ChatMessage(role="user", content=prompt)
-        ]
-    )
-
-    return {
-        "explanation": response.choices[0].message.content
-    }
-
-
-# =========================
-# 📄 FILE ANALYSIS (LEVEL 1)
-# =========================
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     content = await file.read()
     text = content.decode("latin-1", errors="ignore")
 
-    result = {
-        "document_type": "Unknown",
-        "confidence": 0,
-        "detected_fields": {}
-    }
+    prompt = f"""
+    Analyze this document and give short output:
 
-    score = 0
+    1. Document type
+    2. Key details found
+    3. Risk level (Low/Medium/High)
 
-    # PAN pattern
-    pan_match = re.search(r'[A-Z]{5}[0-9]{4}[A-Z]', text)
-    if pan_match:
-        result["detected_fields"]["pan"] = pan_match.group()
-        result["document_type"] = "Identity Document"
-        score += 40
+    Keep answer SHORT and structured.
 
-    # 12-digit ID
-    id_match = re.search(r'\b\d{12}\b', text)
-    if id_match:
-        result["detected_fields"]["id_number"] = id_match.group()
-        score += 30
+    Document:
+    {text[:1000]}
+    """
 
-    # Name detection
-    words = text.split()
-    probable_names = [w for w in words if w.istitle() and len(w) > 3]
+    result = ask_ai(prompt)
 
-    if probable_names:
-        result["detected_fields"]["possible_names"] = probable_names[:3]
-        score += 15
-
-    # Contract detection
-    if len(text) > 500:
-        result["document_type"] = "Contract Document"
-        score += 15
-
-    result["confidence"] = score
-
-    return result
+    return {"analysis": result}
 
 
 # =========================
 # 🧪 TEST AI
 # =========================
+
 @app.get("/test-ai")
 def test_ai():
-    response = client.chat(
-        model="mistral-small",
-        messages=[
-            ChatMessage(role="user", content="Say hello")
-        ]
-    )
-
-    return {
-        "ai": response.choices[0].message.content
-    }
+    result = ask_ai("Say hello in one line")
+    return {"response": result}

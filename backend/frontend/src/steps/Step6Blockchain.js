@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { connectWallet, sendTransaction } from "../wallet/wallet";
 
-function Step6Blockchain({ filesA, filesB }) {
+function Step6Blockchain({ filesA = {}, filesB = {} }) {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -11,6 +11,8 @@ function Step6Blockchain({ filesA, filesB }) {
   };
 
   const fileToHash = async (file) => {
+    if (!file) return "NO_FILE"; // ✅ VERY IMPORTANT
+
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -21,23 +23,38 @@ function Step6Blockchain({ filesA, filesB }) {
     try {
       setLoading(true);
 
-      const keys = Object.keys(filesA);
+      const safeFilesA = filesA || {};
+      const safeFilesB = filesB || {};
+
+      const keys = Array.from(
+        new Set([
+          ...Object.keys(safeFilesA),
+          ...Object.keys(safeFilesB),
+        ])
+      );
+
+      if (keys.length === 0) {
+        alert("⚠ No documents uploaded. Saving empty agreement.");
+      }
 
       const hashes = {};
 
       for (let key of keys) {
-        const hashA = await fileToHash(filesA[key]);
-        const hashB = await fileToHash(filesB[key]);
+        const hashA = await fileToHash(safeFilesA[key]);
+        const hashB = await fileToHash(safeFilesB[key]);
 
-        hashes[key] = { hashA, hashB };
+        hashes[key] = {
+          partyA: hashA,
+          partyB: hashB,
+        };
       }
 
-      const txId = await sendTransaction({
+      const txid = await sendTransaction({
         documents: hashes,
         timestamp: Date.now(),
       });
 
-      alert("✅ Saved to blockchain!\nTX ID: " + txId);
+      alert("✅ Saved to blockchain!\nTX ID: " + txid);
 
     } catch (err) {
       console.error(err);
