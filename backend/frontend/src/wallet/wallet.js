@@ -2,6 +2,8 @@ import { PeraWalletConnect } from "@perawallet/connect";
 import algosdk from "algosdk";
 
 const peraWallet = new PeraWalletConnect();
+
+// 🔥 GLOBAL ACCOUNT (IMPORTANT)
 let accountAddress = null;
 
 const algodClient = new algosdk.Algodv2(
@@ -10,22 +12,26 @@ const algodClient = new algosdk.Algodv2(
   ""
 );
 
-// Restore session
+// 🔁 Restore session
 peraWallet.reconnectSession().then((accounts) => {
   if (accounts.length) {
     accountAddress = accounts[0];
+    window.accountAddress = accountAddress;
     console.log("Reconnected:", accountAddress);
   }
 });
 
+// 🔗 CONNECT WALLET
 export async function connectWallet() {
   try {
     if (accountAddress) return accountAddress;
 
     const accounts = await peraWallet.connect();
-    accountAddress = accounts[0];
 
-    console.log("Connected:", accountAddress);
+    accountAddress = accounts[0];
+    window.accountAddress = accountAddress;
+
+    console.log("Connected account:", accountAddress);
 
     return accountAddress;
   } catch (error) {
@@ -34,46 +40,73 @@ export async function connectWallet() {
   }
 }
 
+// 🚀 SEND TRANSACTION (FINAL FIXED)
 export async function sendTransaction(data) {
   try {
     if (!accountAddress) {
       await connectWallet();
     }
 
-    console.log("🔥 USING ACCOUNT:", accountAddress);
+    console.log("USING ACCOUNT:", accountAddress);
 
     const params = await algodClient.getTransactionParams().do();
 
     const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       sender: accountAddress,
       receiver: accountAddress,
-      amount: 1000, // small amount (0.001 ALGO)
+      amount: 1000, // small test amount
       note: new TextEncoder().encode(JSON.stringify(data)),
       suggestedParams: params,
     });
 
     const txnGroup = [
       {
-        txn: txn,
+        txn,
         signers: [accountAddress],
       },
     ];
 
-    // ✅ FIXED SIGNING
     const signedTxn = await peraWallet.signTransaction([txnGroup]);
 
-    const rawTxn = signedTxn[0]; // 🔥 VERY IMPORTANT FIX
+    const response = await algodClient.sendRawTransaction(signedTxn).do();
 
-    const response = await algodClient.sendRawTransaction(rawTxn).do();
+    console.log("FULL RESPONSE:", response);
 
-    const txId = response.txId || response.txid;
+    // 🔥 HANDLE ALL CASES
+    let txId = null;
 
-    console.log("✅ TX SUCCESS:", txId);
+    if (typeof response === "string") {
+      txId = response;
+    } else if (response.txId) {
+      txId = response.txId;
+    } else if (response.txid) {
+      txId = response.txid;
+    }
+
+    if (!txId) {
+      throw new Error("Transaction sent but txId missing (check console)");
+    }
+
+    // 💾 STORE LOCALLY
+    const oldTx = JSON.parse(localStorage.getItem("transactions")) || [];
+
+    const newTx = {
+      txId,
+      data,
+      time: new Date().toISOString(),
+    };
+
+    localStorage.setItem(
+      "transactions",
+      JSON.stringify([newTx, ...oldTx])
+    );
+
+    alert("✅ Saved to blockchain!\nTX ID: " + txId);
 
     return txId;
 
   } catch (error) {
-    console.error("❌ Transaction failed:", error);
+    console.error("Transaction failed:", error);
     alert("Transaction failed: " + error.message);
     throw error;
   }

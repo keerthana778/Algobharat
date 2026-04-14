@@ -8,6 +8,8 @@ import Step4Review from "./steps/Step4Review";
 import Step5AI from "./steps/Step5AI";
 import Step6Blockchain from "./steps/Step6Blockchain";
 
+import TransactionList from "./TransactionList";
+
 function App() {
   const [step, setStep] = useState(1);
 
@@ -23,7 +25,7 @@ function App() {
       {step === 1 && (
         <Step1Docs
           next={() => setStep(2)}
-          setDocTypes={setDocTypes}   // ✅ FIXED HERE
+          setDocTypes={setDocTypes}
         />
       )}
 
@@ -69,6 +71,9 @@ function App() {
           filesB={filesB}
         />
       )}
+
+      {/* 🔥 TRANSACTION HISTORY (VISIBLE ALWAYS BELOW) */}
+      <TransactionList />
     </div>
   );
 }
