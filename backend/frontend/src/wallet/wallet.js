@@ -25,6 +25,8 @@ export async function connectWallet() {
     const accounts = await peraWallet.connect();
     accountAddress = accounts[0];
 
+    console.log("Connected:", accountAddress);
+
     return accountAddress;
   } catch (error) {
     console.error("Wallet connection failed:", error);
@@ -38,12 +40,14 @@ export async function sendTransaction(data) {
       await connectWallet();
     }
 
+    console.log("🔥 USING ACCOUNT:", accountAddress);
+
     const params = await algodClient.getTransactionParams().do();
 
     const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       sender: accountAddress,
       receiver: accountAddress,
-      amount: 100000,
+      amount: 1000, // small amount (0.001 ALGO)
       note: new TextEncoder().encode(JSON.stringify(data)),
       suggestedParams: params,
     });
@@ -55,18 +59,21 @@ export async function sendTransaction(data) {
       },
     ];
 
+    // ✅ FIXED SIGNING
     const signedTxn = await peraWallet.signTransaction([txnGroup]);
 
-    const response = await algodClient.sendRawTransaction(signedTxn).do();
+    const rawTxn = signedTxn[0]; // 🔥 VERY IMPORTANT FIX
+
+    const response = await algodClient.sendRawTransaction(rawTxn).do();
 
     const txId = response.txId || response.txid;
 
-    alert("Transaction successful!\nTX ID: " + txId);
+    console.log("✅ TX SUCCESS:", txId);
 
     return txId;
 
   } catch (error) {
-    console.error("Transaction failed:", error);
+    console.error("❌ Transaction failed:", error);
     alert("Transaction failed: " + error.message);
     throw error;
   }

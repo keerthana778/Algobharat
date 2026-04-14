@@ -1,113 +1,73 @@
 import React, { useState } from "react";
 import "./App.css";
-import { connectWallet, sendTransaction } from "./wallet";
+
+import Step1Docs from "./steps/Step1Docs";
+import Step2PartyA from "./steps/Step2PartyA";
+import Step3PartyB from "./steps/Step3PartyB";
+import Step4Review from "./steps/Step4Review";
+import Step5AI from "./steps/Step5AI";
+import Step6Blockchain from "./steps/Step6Blockchain";
 
 function App() {
-  const [account, setAccount] = useState(null);
-  const [fileA, setFileA] = useState(null);
-  const [fileB, setFileB] = useState(null);
-  const [result, setResult] = useState(null);
+  const [step, setStep] = useState(1);
 
-  // CONNECT WALLET
-  async function handleConnect() {
-    try {
-      const acc = await connectWallet();
-      setAccount(acc);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  // FILE → HASH
-  async function fileToHash(file) {
-    const buffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-  }
-
-  // GET TRANSACTION DATA (SAFE VERSION)
-  async function getTransaction(txId) {
-    const res = await fetch(
-      `https://testnet-api.algonode.cloud/v2/transactions/${txId}`
-    );
-
-    const data = await res.json();
-
-    // 🔥 handle delay in blockchain confirmation
-    if (!data.transaction || !data.transaction.note) {
-      throw new Error("Transaction not confirmed yet, try again");
-    }
-
-    const note = atob(data.transaction.note);
-
-    return JSON.parse(note);
-  }
-
-  // MAIN FUNCTION
-  async function handleSubmit() {
-    try {
-      if (!fileA || !fileB) {
-        alert("Upload both documents");
-        return;
-      }
-
-      // create hashes
-      const hashA = await fileToHash(fileA);
-      const hashB = await fileToHash(fileB);
-
-      // send transaction
-      const txId = await sendTransaction({
-        hashA,
-        hashB,
-        timestamp: Date.now(),
-      });
-
-      if (!txId) {
-        alert("Transaction sent but TX ID missing");
-        return;
-      }
-
-      // ⏳ WAIT for blockchain confirmation
-      await new Promise((resolve) => setTimeout(resolve, 4000));
-
-      // fetch stored data
-      const savedData = await getTransaction(txId);
-
-      setResult(savedData);
-
-    } catch (err) {
-      console.error(err);
-      alert("Error: " + err.message);
-    }
-  }
+  const [docTypes, setDocTypes] = useState([]);
+  const [filesA, setFilesA] = useState({});
+  const [filesB, setFilesB] = useState({});
 
   return (
     <div className="App">
-      <h1>📄 AI Agreement Verifier</h1>
+      <h1>📄 Loan Agreement System</h1>
 
-      <button onClick={handleConnect}>
-        {account ? "Connected ✅" : "Connect Wallet (QR)"}
-      </button>
+      {/* STEP 1 */}
+      {step === 1 && (
+        <Step1Docs
+          next={() => setStep(2)}
+          setDocTypes={setDocTypes}   // ✅ FIXED HERE
+        />
+      )}
 
-      <div className="card">
-        <h3>Upload Agreement Documents</h3>
+      {/* STEP 2 */}
+      {step === 2 && (
+        <Step2PartyA
+          docTypes={docTypes}
+          next={() => setStep(3)}
+          setFilesA={setFilesA}
+        />
+      )}
 
-        <input type="file" onChange={(e) => setFileA(e.target.files[0])} />
-        <input type="file" onChange={(e) => setFileB(e.target.files[0])} />
+      {/* STEP 3 */}
+      {step === 3 && (
+        <Step3PartyB
+          docTypes={docTypes}
+          next={() => setStep(4)}
+          setFilesB={setFilesB}
+        />
+      )}
 
-        <button onClick={handleSubmit}>
-          Verify & Record on Blockchain
-        </button>
-      </div>
+      {/* STEP 4 */}
+      {step === 4 && (
+        <Step4Review
+          docTypes={docTypes}
+          next={() => setStep(5)}
+        />
+      )}
 
-      {result && (
-        <div className="result">
-          <h3>📊 Stored Data</h3>
-          <p><b>Hash A:</b> {result.hashA}</p>
-          <p><b>Hash B:</b> {result.hashB}</p>
-          <p><b>Time:</b> {new Date(result.timestamp).toLocaleString()}</p>
-        </div>
+      {/* STEP 5 */}
+      {step === 5 && (
+        <Step5AI
+          filesA={filesA}
+          filesB={filesB}
+          next={() => setStep(6)}
+        />
+      )}
+
+      {/* STEP 6 */}
+      {step === 6 && (
+        <Step6Blockchain
+          filesA={filesA}
+          filesB={filesB}
+        />
       )}
     </div>
   );
