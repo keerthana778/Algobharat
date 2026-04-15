@@ -1,6 +1,6 @@
 import React from "react";
 
-function Step2PartyA({ docTypes = [], setFilesA, next }) {
+function Step2PartyA({ docTypes = [], setFilesA, next, notify }) {
 
   const handleFileChange = (doc, file) => {
     if (!file) return;
@@ -12,7 +12,7 @@ function Step2PartyA({ docTypes = [], setFilesA, next }) {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      alert("❌ Only JPG, PNG, or PDF files are allowed");
+      notify?.("Only JPG, PNG, or PDF files are allowed.", "warning");
       return;
     }
 
@@ -20,19 +20,22 @@ function Step2PartyA({ docTypes = [], setFilesA, next }) {
       ...prev,
       [doc]: file
     }));
+    notify?.(`Uploaded for Party A: ${doc}`, "success");
   };
 
   return (
-    <div>
-      <h2>Step 2: Party A Upload</h2>
+    <div className="card">
+      <h2 className="section-title">Step 2: 👤 Party A Upload</h2>
+      <p className="section-help">Upload matching files from the first party.</p>
 
       {docTypes.length === 0 ? (
-        <p>No documents selected</p>
+        <p className="status-bad">No documents selected.</p>
       ) : (
         docTypes.map((doc, i) => (
-          <div key={i}>
-            <p>{doc}</p>
+          <div key={i} className="upload-card">
+            <p><strong>📄 {doc}</strong></p>
             <input
+              className="file-input"
               type="file"
               onChange={(e) =>
                 handleFileChange(doc, e.target.files[0])
@@ -42,8 +45,9 @@ function Step2PartyA({ docTypes = [], setFilesA, next }) {
         ))
       )}
 
-      <br />
-      <button onClick={next}>Next</button>
+      <button className="button button-primary" onClick={next}>
+        Continue to Party B
+      </button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-function Step1Docs({ next, docTypes, setDocTypes }) {
+function Step1Docs({ next, docTypes, setDocTypes, notify }) {
   const [types, setTypes] = useState([]);
 
   useEffect(() => {
@@ -28,33 +28,45 @@ function Step1Docs({ next, docTypes, setDocTypes }) {
 
   function handleNext() {
     const clean = types.filter((t) => t.trim() !== "");
+    if (!clean.length) {
+      notify?.("Add at least one document to continue.", "warning");
+      return;
+    }
     setDocTypes(clean);
+    notify?.("Document list saved.", "success");
     next();
   }
 
   return (
     <div className="card">
-      <h2>Step 1: Confirm / Edit Documents</h2>
+      <h2 className="section-title">Step 1: 🧾 Confirm / Edit Documents</h2>
+      <p className="section-help">
+        Add, rename, or remove required documents before uploads start.
+      </p>
 
       {types.map((doc, index) => (
-        <div key={index}>
+        <div key={index} className="row">
           <input
+            className="input"
             value={doc}
             onChange={(e) => handleChange(index, e.target.value)}
             placeholder={`Document ${index + 1}`}
           />
 
-          <button onClick={() => deleteDoc(index)}>❌</button>
+          <button className="button button-danger" onClick={() => deleteDoc(index)}>
+            Remove
+          </button>
         </div>
       ))}
 
-      <br />
-
-      <button onClick={addDoc}>➕ Add Document</button>
-
-      <br /><br />
-
-      <button onClick={handleNext}>Next</button>
+      <div className="row wrap">
+        <button className="button button-secondary" onClick={addDoc}>
+          ➕ Add Document
+        </button>
+        <button className="button button-primary" onClick={handleNext}>
+          Continue to Upload
+        </button>
+      </div>
     </div>
   );
 }

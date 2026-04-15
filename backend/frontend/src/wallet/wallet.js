@@ -101,13 +101,10 @@ export async function sendTransaction(data) {
       JSON.stringify([newTx, ...oldTx])
     );
 
-    alert("✅ Saved to blockchain!\nTX ID: " + txId);
-
     return txId;
 
   } catch (error) {
     console.error("Transaction failed:", error);
-    alert("Transaction failed: " + error.message);
     throw error;
   }
 }

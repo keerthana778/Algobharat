@@ -1,86 +1,78 @@
 import React from "react";
 
-function Step5AI({ docTypes = [], filesA = {}, filesB = {}, next }) {
+function Step5AI({ reviewResult = [], next, notify }) {
 
-  const getSummary = () => {
-    if (!docTypes || docTypes.length === 0) {
+  const generateSummary = () => {
+    if (!reviewResult || reviewResult.length === 0) {
       return {
-        text: "No documents were selected.",
-        confidence: 0,
-        suggestions: ["Please add required documents"]
+        summary: "No validation results available.",
+        suggestions: ["Run Step 4 validation first"]
       };
     }
 
-    let total = docTypes.length;
-    let present = 0;
-    let strongDocs = 0;
-    let weakDocs = 0;
+    let valid = 0;
+    let wrong = 0;
 
     let suggestions = [];
 
-    docTypes.forEach((doc) => {
-      const hasA = filesA?.[doc];
-      const hasB = filesB?.[doc];
+    reviewResult.forEach((r) => {
+      if (r.status.includes("✅")) valid++;
+      else wrong++;
 
-      if (hasA || hasB) {
-        present++;
-
-        const name = doc.toLowerCase();
-
-        // 🔥 simple smart scoring
-        if (name.includes("agreement") || name.includes("loan")) {
-          strongDocs++;
-        } else {
-          weakDocs++;
-          suggestions.push(`${doc} may need stronger validation or clarity`);
-        }
-      } else {
-        suggestions.push(`${doc} is missing`);
+      if (r.issues?.length) {
+        suggestions.push(`${r.doc}: ${r.issues.join(", ")}`);
       }
     });
 
-    let confidence = Math.round((present / total) * 100);
+    let summary = "";
 
-    if (strongDocs > weakDocs) confidence += 10;
-    if (confidence > 100) confidence = 100;
-
-    let text = "";
-
-    if (confidence > 80) {
-      text = "Agreement looks strong and well-supported.";
-    } else if (confidence > 50) {
-      text = "Agreement is moderate but can be improved.";
+    if (valid === reviewResult.length) {
+      summary = "All documents appear consistent.";
+    } else if (wrong > 0) {
+      summary = "Some documents are incorrect or mismatched.";
     } else {
-      text = "Agreement is weak. Missing or unclear documents.";
+      summary = "Documents are partially valid but need improvement.";
     }
 
-    return { text, confidence, suggestions };
+    if (suggestions.length === 0) {
+      suggestions.push("No major issues detected.");
+    }
+
+    return { summary, suggestions };
   };
 
-  const result = getSummary();
+  const result = generateSummary();
 
   return (
-    <div>
-      <h2>Step 5: AI Summary</h2>
+    <div className="card">
+      <h2 className="section-title">Step 5: 🧠 AI Summary</h2>
+      <p className="section-help">
+        View a quick decision summary and recommended fixes before finalization.
+      </p>
 
-      <h3>🧠 Summary</h3>
-      <p>{result.text}</p>
+      <div className="result-card">
+        <h3>Summary</h3>
+        <p>{result.summary}</p>
+      </div>
 
-      <h3>📊 Confidence Score</h3>
-      <h1>{result.confidence}%</h1>
-
-      <h3>⚠ Suggestions</h3>
-      {result.suggestions.length === 0 ? (
-        <p>No issues found 🎉</p>
-      ) : (
+      <div className="result-card">
+        <h3>Suggestions</h3>
         <ul>
           {result.suggestions.map((s, i) => (
-            <li key={i}>{s}</li>
+            <li key={i}>💡 {s}</li>
           ))}
         </ul>
-      )}
+      </div>
 
-      <button onClick={next}>Proceed to Blockchain</button>
+      <button
+        className="button button-primary"
+        onClick={() => {
+          notify?.("Moving to blockchain finalization.", "info");
+          next();
+        }}
+      >
+        Proceed to Blockchain
+      </button>
     </div>
   );
 }

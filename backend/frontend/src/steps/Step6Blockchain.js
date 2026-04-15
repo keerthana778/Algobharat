@@ -1,13 +1,18 @@
 import React, { useState } from "react";
 import { connectWallet, sendTransaction } from "../wallet/wallet";
 
-function Step6Blockchain({ filesA = {}, filesB = {} }) {
+function Step6Blockchain({ filesA = {}, filesB = {}, notify }) {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleConnect = async () => {
-    const acc = await connectWallet();
-    setAccount(acc);
+    try {
+      const acc = await connectWallet();
+      setAccount(acc);
+      notify?.(`Wallet connected: ${acc}`, "success");
+    } catch (error) {
+      notify?.("Wallet connection failed.", "error");
+    }
   };
 
   const fileToHash = async (file) => {
@@ -34,7 +39,7 @@ function Step6Blockchain({ filesA = {}, filesB = {} }) {
       );
 
       if (keys.length === 0) {
-        alert("⚠ No documents uploaded. Saving empty agreement.");
+        notify?.("No documents uploaded. Saving empty agreement.", "warning");
       }
 
       const hashes = {};
@@ -54,28 +59,31 @@ function Step6Blockchain({ filesA = {}, filesB = {} }) {
         timestamp: Date.now(),
       });
 
-      alert("✅ Saved to blockchain!\nTX ID: " + txid);
+      notify?.(`Saved to blockchain. TX ID: ${txid}`, "success");
 
     } catch (err) {
       console.error(err);
-      alert("Error: " + err.message);
+      notify?.(`Blockchain error: ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Step 6: Blockchain</h2>
+    <div className="card">
+      <h2 className="section-title">Step 6: ⛓ Blockchain Finalization</h2>
+      <p className="section-help">
+        Connect wallet and save hashed agreement metadata on chain.
+      </p>
 
-      <button onClick={handleConnect}>
-        {account ? "Connected ✅" : "Connect Wallet"}
+      <button className="button button-secondary" onClick={handleConnect}>
+        {account ? "Connected ✅" : "🔗 Connect Wallet"}
       </button>
 
-      <br /><br />
+      <div style={{ height: 12 }} />
 
-      <button onClick={handleBlockchain} disabled={loading}>
-        {loading ? "Processing..." : "Save to Blockchain"}
+      <button className="button button-success" onClick={handleBlockchain} disabled={loading}>
+        {loading ? "Processing..." : "🚀 Save to Blockchain"}
       </button>
     </div>
   );
