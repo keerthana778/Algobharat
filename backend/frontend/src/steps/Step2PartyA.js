@@ -8,42 +8,42 @@ function Step2PartyA({ docTypes = [], setFilesA, next, notify }) {
     const allowedTypes = [
       "image/jpeg",
       "image/png",
-      "application/pdf"
+      "application/pdf",
+      "text/plain"
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      notify?.("Only JPG, PNG, or PDF files are allowed.", "warning");
+      notify?.("Use TXT (recommended), JPG, PNG or PDF.", "warning");
       return;
+    }
+
+    if (file.type === "application/pdf") {
+      notify?.("PDF uploaded. TXT format is recommended for best AI accuracy.", "info");
     }
 
     setFilesA((prev) => ({
       ...prev,
       [doc]: file
     }));
+
     notify?.(`Uploaded for Party A: ${doc}`, "success");
   };
 
   return (
     <div className="card">
       <h2 className="section-title">Step 2: 👤 Party A Upload</h2>
-      <p className="section-help">Upload matching files from the first party.</p>
+      <p className="section-help">TXT format recommended for best validation.</p>
 
-      {docTypes.length === 0 ? (
-        <p className="status-bad">No documents selected.</p>
-      ) : (
-        docTypes.map((doc, i) => (
-          <div key={i} className="upload-card">
-            <p><strong>📄 {doc}</strong></p>
-            <input
-              className="file-input"
-              type="file"
-              onChange={(e) =>
-                handleFileChange(doc, e.target.files[0])
-              }
-            />
-          </div>
-        ))
-      )}
+      {docTypes.map((doc, i) => (
+        <div key={i} className="upload-card">
+          <p><strong>📄 {doc}</strong></p>
+          <input
+            className="file-input"
+            type="file"
+            onChange={(e) => handleFileChange(doc, e.target.files[0])}
+          />
+        </div>
+      ))}
 
       <button className="button button-primary" onClick={next}>
         Continue to Party B

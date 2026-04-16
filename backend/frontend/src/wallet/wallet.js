@@ -3,7 +3,7 @@ import algosdk from "algosdk";
 
 const peraWallet = new PeraWalletConnect();
 
-// 🔥 GLOBAL ACCOUNT (IMPORTANT)
+// GLOBAL ACCOUNT
 let accountAddress = null;
 
 const algodClient = new algosdk.Algodv2(
@@ -12,20 +12,11 @@ const algodClient = new algosdk.Algodv2(
   ""
 );
 
-// 🔁 Restore session
-peraWallet.reconnectSession().then((accounts) => {
-  if (accounts.length) {
-    accountAddress = accounts[0];
-    window.accountAddress = accountAddress;
-    console.log("Reconnected:", accountAddress);
-  }
-});
+// 🚫 NO AUTO RECONNECT (REMOVED)
 
-// 🔗 CONNECT WALLET
+// 🔌 CONNECT WALLET
 export async function connectWallet() {
   try {
-    if (accountAddress) return accountAddress;
-
     const accounts = await peraWallet.connect();
 
     accountAddress = accounts[0];
@@ -40,7 +31,17 @@ export async function connectWallet() {
   }
 }
 
-// 🚀 SEND TRANSACTION (FINAL FIXED)
+// 🔌 DISCONNECT WALLET
+export async function disconnectWallet() {
+  await peraWallet.disconnect();
+
+  accountAddress = null;
+  window.accountAddress = null;
+
+  console.log("Wallet disconnected");
+}
+
+// 🚀 SEND TRANSACTION (FIXED)
 export async function sendTransaction(data) {
   try {
     if (!accountAddress) {
@@ -54,7 +55,7 @@ export async function sendTransaction(data) {
     const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       sender: accountAddress,
       receiver: accountAddress,
-      amount: 1000, // small test amount
+      amount: 1000,
       note: new TextEncoder().encode(JSON.stringify(data)),
       suggestedParams: params,
     });
@@ -72,23 +73,24 @@ export async function sendTransaction(data) {
 
     console.log("FULL RESPONSE:", response);
 
-    // 🔥 HANDLE ALL CASES
-    let txId = null;
-
-    if (typeof response === "string") {
-      txId = response;
-    } else if (response.txId) {
-      txId = response.txId;
-    } else if (response.txid) {
-      txId = response.txid;
-    }
+    // ✅ FIXED TX ID EXTRACTION
+    let txId =
+      response?.txId ||
+      response?.txid ||
+      response?.txn?.txId ||
+      response;
 
     if (!txId) {
-      throw new Error("Transaction sent but txId missing (check console)");
+      console.log("DEBUG RESPONSE:", response);
+      throw new Error("Transaction sent but txId missing");
     }
 
-    // 💾 STORE LOCALLY
-    const oldTx = JSON.parse(localStorage.getItem("transactions")) || [];
+    // ✅ WAIT FOR CONFIRMATION
+    await algosdk.waitForConfirmation(algodClient, txId, 4);
+
+    // 💾 STORE LOCAL
+    const oldTx =
+      JSON.parse(localStorage.getItem("transactions")) || [];
 
     const newTx = {
       txId,
@@ -102,7 +104,6 @@ export async function sendTransaction(data) {
     );
 
     return txId;
-
   } catch (error) {
     console.error("Transaction failed:", error);
     throw error;

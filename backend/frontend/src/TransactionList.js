@@ -15,13 +15,35 @@ function TransactionList() {
         All blockchain transaction records stored by this app on your device.
       </p>
 
-      {txs.length === 0 && <p className="status-warn">No transactions yet.</p>}
+      {txs.length === 0 && (
+        <p className="status-warn">No transactions yet.</p>
+      )}
 
       {txs.map((tx, index) => (
         <div key={index} className="result-card">
-          <p><b>TX ID:</b> <span className="history-txid">{tx.txId}</span></p>
-          <p><b>Time:</b> {new Date(tx.time).toLocaleString()}</p>
-          <p><b>Documents:</b> {Object.keys(tx.data?.documents || {}).length}</p>
+          <p>
+            <b>TX ID:</b>{" "}
+            <span className="history-txid">{tx.txId}</span>
+          </p>
+
+          <a
+            href={`https://testnet.explorer.perawallet.app/tx/${tx.txId}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#4da6ff", textDecoration: "underline" }}
+          >
+            🔗 View full transaction details
+          </a>
+
+          <p>
+            <b>Time:</b>{" "}
+            {new Date(tx.time).toLocaleString()}
+          </p>
+
+          <p>
+            <b>Documents:</b>{" "}
+            {Object.keys(tx.data?.documents || {}).length}
+          </p>
         </div>
       ))}
     </div>
