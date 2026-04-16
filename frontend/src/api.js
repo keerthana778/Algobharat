@@ -1,4 +1,4 @@
-const BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = "https://algobharat-1-2m3x.onrender.com";
 
 export async function suggestDocs(purpose) {
   const formData = new FormData();
