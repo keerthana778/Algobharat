@@ -13,7 +13,12 @@ function Step0Suggest({ next, setDocTypes, notify }) {
 
     try {
       setLoading(true);
-      const res = await fetch("http://127.0.0.1:8000/ai/suggest", {
+      
+      // 1. This variable looks at Vercel settings first
+      const API_BASE = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
+
+      // 2. Fixed the template literal and removed the extra symbols
+      const response = await fetch(`${API_BASE}/ai/suggest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -21,11 +26,18 @@ function Step0Suggest({ next, setDocTypes, notify }) {
         body: `purpose=${encodeURIComponent(purpose)}`,
       });
 
-      const data = await res.json();
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      // 3. Changed 'res' to 'response' to match the variable name above
+      const data = await response.json();
       const suggestedDocs = data.documents || [];
+      
       setDocs(suggestedDocs);
       notify?.(`Found ${suggestedDocs.length} suggested documents.`, "success");
     } catch (error) {
+      console.error("Fetch error:", error);
       notify?.("Could not fetch suggestions from AI service.", "error");
     } finally {
       setLoading(false);
@@ -62,7 +74,7 @@ function Step0Suggest({ next, setDocTypes, notify }) {
           Continue to Step 1
         </button>
       </div>
-      <div>
+      <div style={{ marginTop: "10px" }}>
         {(docs || []).map((doc, i) => (
           <span key={i} className="doc-pill">📄 {doc}</span>
         ))}
