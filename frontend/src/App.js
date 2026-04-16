@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./App.css";
+import logo from "./assets/logo.jpeg";
 
 import Step0Suggest from "./steps/Step0Suggest";
 import Step1Docs from "./steps/Step1Docs";
@@ -55,9 +56,20 @@ function App() {
     <div className="app-shell">
       <div className="background-glow" />
       <div className="app-container">
-        <h1 className="app-title">AI + Blockchain Agreement System</h1>
-        <p className="app-subtitle">
-          Create and validate multi-party agreements in a guided flow.
+
+        {/* ✅ CENTERED LOGO */}
+        <div style={{ textAlign: "center", marginBottom: 10 }}>
+          <img src={logo} alt="AgreeBlock Logo" style={{ height: 120 }} />
+        </div>
+
+        {/* ✅ CENTERED TITLE */}
+        <h1 className="app-title" style={{ textAlign: "center" }}>
+          AgreeBlock
+        </h1>
+
+        {/* ✅ CENTERED SUBTITLE */}
+        <p className="app-subtitle" style={{ textAlign: "center" }}>
+          Secure, tamper-proof agreement AI verification using blockchain.
         </p>
 
         {view === "dashboard" && (
