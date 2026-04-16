@@ -1,4 +1,5 @@
-const BASE_URL = "https://algobharat-1-2m3x.onrender.com";
+const BASE_URL = process.env.https://algobharat-1-2m3x.onrender.com;
+REACT_APP_API_URL=https://algobharat-1-2m3x.onrender.com
 
 export async function suggestDocs(purpose) {
   const formData = new FormData();
